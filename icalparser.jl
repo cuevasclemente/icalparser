@@ -6,7 +6,7 @@ function parse(filename)
     close(icalstream)
     return mydict
 end
-export parser
+export parse
 
 function parse_stream(icalstream)
     icalcontainer = []
@@ -35,7 +35,7 @@ function parse_stream(icalstream,icalcontainer)
         icalcontainer = [icalcontainer;parsedict]
         parse_stream(icalstream,icalcontainer)
     end
-endi
+end
 
 function parse_event(icalstream)
     
@@ -44,7 +44,8 @@ function parse_event(icalstream)
     (key,value) = parse_line(line)
     #println("$key,$value")
     if key == "BEGIN"
-       return  {value => parse_event(icalstream,dict)}
+       scope = key
+       return  {value => parse_event(icalstream,dict,scope)}
     elseif key == "END" 
         return dict
     else
@@ -58,24 +59,46 @@ function parse_event(icalstream)
     end
 end
 
-function parse_event(icalstream,dict)
+function parse_event(icalstream,dict,scope)
     line = readline(icalstream)
     (key,value) = parse_line(line)
     if key == "BEGIN"
-        return {value => parse_event(icalstream,dict)}
-    elseif key == "END"
+        new_scope = key
+        return {value => parse_event(icalstream,dict,scope,new_scope)}
+    elseif key == "END" && value == convert(ASCIIString,scope)
         return dict
     else
         dict = merge(dict,{key=>value})
         if eof(icalstream)
             return dict
         else
-            parse_event(icalstream,dict)
+            parse_event(icalstream,dict,scope)
         end
     end
 end
         
-         
+
+function parse_event(icalstream,dict,scope,new_scope)
+    line = readline(icalstream)
+    (key,value) = parse_line(line)
+    if key == "BEGIN"
+        new_scope = key
+        return {value => parse_event(icalstream,dict,scope,new_scope)}
+    elseif key == "END" && value == convert(ASCIIString,new_scope)
+        return dict
+    elseif key == "END" && value == convert(ASCIIString,scope)
+        return dict
+    else
+        dict = merge(dict,{key=>value})
+        if eof(icalstream)
+            return dict
+        else
+            parse_event(icalstream,dict,scope,new_scope)
+        end
+    end
+end
+
+
               
         
                              
